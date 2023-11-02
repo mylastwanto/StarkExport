@@ -153,11 +153,10 @@
       <artifactId>jstl</artifactId>
       <version>1.2</version>
     </dependency>
-
     <dependency>
-      <groupId>com.konghq</groupId>
-      <artifactId>unirest-java</artifactId>
-      <version>3.14.1</version>
+      <groupId>com.swmansion.starknet</groupId>
+      <artifactId>starknet</artifactId>
+      <version>0.7.2</version>
     </dependency>
   </dependencies>
   <build>
