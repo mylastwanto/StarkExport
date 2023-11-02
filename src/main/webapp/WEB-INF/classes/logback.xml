@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>%d{dd-MM-yy HH:mm:ss,Asia/Jakarta} %1.-1p %15.15c{1}> %X{client}%m%n</Pattern>
+        </layout>
+    </appender>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <File>${catalina.home}/logs/starkexport.log</File>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <FileNamePattern>${catalina.home}/logs/starkexport-%d{yyyy-MM-dd-HHmmss}.log</FileNamePattern>
+        </rollingPolicy>
+
+        <layout class="ch.qos.logback.classic.PatternLayout">
+            <Pattern>
+                %d{dd-MM-yy HH:mm:ss,Asia/Jakarta} - %msg%n
+            </Pattern>
+        </layout>
+    </appender>
+
+    <!-- System logging -->
+    <root>
+        <level value="ERROR"/>
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+    <logger name="org.apache">
+        <level value="ERROR"/>
+    </logger>
+
+    <logger name="org.springframework">
+        <level value="ERROR"/>
+    </logger>
+
+    <logger name="com.starkexport">
+        <level value="INFO"/>
+    </logger>
+   
+    <logger name="LOG-FILE">
+        <level value="ALL"/>
+        <appender-ref ref="FILE"/>
+    </logger>
+</configuration>
