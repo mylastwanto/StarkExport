@@ -14,8 +14,12 @@
     <script>
         function getTransaction(){
             var addr = document.form.address.value;
+            var btn = document.getElementById('btnSubmit');
+
 
             if (addr === ''){
+                btn.disabled = false;
+                btn.childNodes[0].nodeValue= "Download";
                 alert('Please enter Starknet Address');
                 return;
             }
@@ -23,6 +27,8 @@
             var output = document.form.output.value.toLowerCase();
 
             window.location = '/account/transactions?address=' + addr + '&output=' + output;
+            btn.disabled = false;
+            btn.childNodes[0].nodeValue= "Download";
         }
 
     </script>
@@ -154,7 +160,7 @@
     <main>
         <div class="py-5 text-left">
             <h2>StarkExport</h2>
-            <p class="lead">Effortlessly effort Starknet transactions to CSV, XLSX and more</p>
+            <p class="lead">Effortlessly effort Starknet transactions to CSV, XLSX, JSON and more</p>
         </div>
 
         <div class="row g-5">
@@ -175,7 +181,7 @@
                             </select>
                         </div>
                         <div class="col-3">
-                            <button class="btn btn-primary" type="button" onclick="getTransaction();">Download</button>
+                            <button class="btn btn-primary" type="button" id="btnSubmit" onclick="this.disabled=true;this.childNodes[0].nodeValue = 'Wait...';getTransaction();">Download</button>
                         </div>
 
                     </div>
@@ -186,7 +192,7 @@
     <footer class="text-end mt-lg-5">
         <!-- Copyright -->
         <div class="text-end">
-            <a href="#">Github</a>
+            <a href="https://github.com/mylastwanto/StarkExport">Github</a>
         </div>
         <!-- Copyright -->
     </footer>
