@@ -13,7 +13,7 @@ Use StarkExport directly via [starkexport.xyz](https://starkexport.xyz)
 Flexible export options with various file formats to cater to different use-cases:
 - CSV :heavy_check_mark:
 - XLSX :heavy_check_mark:
-- TXT :soon:
+- TXT :heavy_check_mark:
 - HTML :soon:
 - XML :soon:
 - ODS :soon:
