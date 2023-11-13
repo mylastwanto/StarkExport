@@ -13,6 +13,7 @@ import com.starkexport.network.StarkscanServiceGenerator;
 import com.swmansion.starknet.data.types.StarknetChainId;
 import com.swmansion.starknet.provider.Provider;
 import com.swmansion.starknet.provider.rpc.JsonRpcProvider;
+import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -38,6 +39,7 @@ import retrofit2.Call;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +63,10 @@ public class ExportController {
                 httpServletResponse.setHeader("Content-Type", "text/csv");
                 httpServletResponse.setHeader("Content-Disposition", "attachment; filename=" + fileName + ".csv");
                 break;
+            case "txt":
+                httpServletResponse.setHeader("Content-Type", "text/plain");
+                httpServletResponse.setHeader("Content-Disposition", "attachment; filename=" + fileName + ".txt");
+                break;
         }
 
         //todo singleton
@@ -76,8 +82,10 @@ public class ExportController {
             retrofit2.Response<Transaction> response = responseCall.execute();
             Transaction transaction = response.body();
 
-            if (output.equalsIgnoreCase("xlsx")){
+            if (output.equalsIgnoreCase("xlsx")) {
                 writeTransactionExcel(httpServletResponse, transaction);
+            } else if (output.equalsIgnoreCase("txt")){
+                writeTransactionTxt(httpServletResponse, transaction);
             } else {
                 writeTransactionCsv(httpServletResponse, transaction);
             }
@@ -108,9 +116,9 @@ public class ExportController {
 
         for(Data data : transaction.getData()){
             Row bodyRow = sheet.createRow(rowCount++);
-            bodyRow.createCell(0).setCellValue(data.getNonce());
+            bodyRow.createCell(0).setCellValue(StringUtils.defaultString(data.getNonce()));
             bodyRow.createCell(1).setCellValue(AppUtil.getUTCDate(data.getTimestamp()));
-            bodyRow.createCell(2).setCellValue(data.getSender_address());
+            bodyRow.createCell(2).setCellValue(StringUtils.defaultString(data.getSender_address()));
             bodyRow.createCell(3).setCellValue(data.getTransaction_type());
 
             List<String> methodList = new ArrayList<>();
@@ -130,6 +138,47 @@ public class ExportController {
 
     }
 
+    private void writeTransactionTxt(HttpServletResponse httpServletResponse, Transaction transaction) throws IOException {
+        PrintWriter writer = httpServletResponse.getWriter();
+
+        String header = StringUtils.rightPad("Nonce", 7);
+        header = header + StringUtils.rightPad("DateTime", 22);
+        header = header + StringUtils.rightPad("From", 70);
+        header = header + StringUtils.rightPad("TrxType", 20);
+        header = header + StringUtils.rightPad("Method", 50);
+        header = header + StringUtils.rightPad("TrxFee", 15);
+        header = header + StringUtils.rightPad("BlockNo", 10);
+        header = header + StringUtils.rightPad("Status", 20);
+        header = header + "TransactionHash";
+
+        writer.println(header);
+        for(Data data : transaction.getData()){
+
+            String line = "";
+            line = line + StringUtils.rightPad(StringUtils.defaultString(data.getNonce()), 7);
+            line = line + StringUtils.rightPad(AppUtil.getUTCDate(data.getTimestamp()), 22);
+            line = line + StringUtils.rightPad(StringUtils.defaultString(data.getSender_address()), 70);
+            line = line + StringUtils.rightPad(data.getTransaction_type(), 20);
+
+            List<String> methodList = new ArrayList<>();
+
+            for(AccountCall accountCall : data.getAccount_calls()){
+                methodList.add(accountCall.getSelector_name());
+            }
+
+            line = line + StringUtils.rightPad(String.join(",", methodList), 50);
+            line = line + StringUtils.rightPad(String.format("%.8f", Convert.fromWei(data.getActual_fee(), Convert.Unit.ETHER)), 15);
+            line = line + StringUtils.rightPad(String.valueOf(data.getBlock_number()), 10);
+            line = line + StringUtils.rightPad(data.getTransaction_status(), 20);
+            line = line + data.getTransaction_hash();
+
+            writer.println(line);
+        }
+
+        writer.close();
+
+    }
+
     private void writeTransactionCsv(HttpServletResponse httpServletResponse, Transaction transaction) throws IOException {
 
         ICsvBeanWriter csvWriter = new CsvBeanWriter(httpServletResponse.getWriter(), CsvPreference.STANDARD_PREFERENCE);
@@ -139,9 +188,9 @@ public class ExportController {
 
         for(Data data : transaction.getData()){
             TransactionExport transactionExport = new TransactionExport();
-            transactionExport.setNonce(data.getNonce());
+            transactionExport.setNonce(StringUtils.defaultString(data.getNonce()));
             transactionExport.setDateTime(AppUtil.getUTCDate(data.getTimestamp()));
-            transactionExport.setFrom(data.getSender_address());
+            transactionExport.setFrom(StringUtils.defaultString(data.getSender_address()));
             transactionExport.setTrxType(data.getTransaction_type());
 
             List<String> methodList = new ArrayList<>();

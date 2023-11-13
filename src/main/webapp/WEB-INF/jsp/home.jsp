@@ -12,12 +12,13 @@
     <script src="resources/js/color-modes.js"></script>
 
     <script>
-        function getTransaction(){
+        function getTransaction(from, length){
             var addr = document.form.address.value;
             var btn = document.getElementById('btnSubmit');
 
+            var start = addr.substring(0, 2);
 
-            if (addr === ''){
+            if (addr === '' || start !== '0x'){
                 btn.disabled = false;
                 btn.childNodes[0].nodeValue= "Download";
                 alert('Please enter Starknet Address');
@@ -178,6 +179,7 @@
                             <select class="form-select" id="output" required>
                                 <option>XLSX</option>
                                 <option>CSV</option>
+                                <option>TXT</option>
                             </select>
                         </div>
                         <div class="col-3">
