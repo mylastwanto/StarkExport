@@ -180,6 +180,7 @@
                                 <option>XLSX</option>
                                 <option>CSV</option>
                                 <option>TXT</option>
+                                <option>ODS</option>
                             </select>
                         </div>
                         <div class="col-3">

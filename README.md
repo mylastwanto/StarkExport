@@ -14,7 +14,7 @@ Flexible export options with various file formats to cater to different use-case
 - CSV :heavy_check_mark:
 - XLSX :heavy_check_mark:
 - TXT :heavy_check_mark:
+- ODS :heavy_check_mark:
 - HTML :soon:
 - XML :soon:
-- ODS :soon:
 

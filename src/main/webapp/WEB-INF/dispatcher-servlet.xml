@@ -24,4 +24,6 @@
 
 	<mvc:annotation-driven/>
 
+	<context:property-placeholder location="classpath:*.properties"/>
+
 </beans>

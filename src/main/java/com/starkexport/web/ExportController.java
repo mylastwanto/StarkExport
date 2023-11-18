@@ -1,5 +1,7 @@
 package com.starkexport.web;
 
+import com.github.miachm.sods.Range;
+import com.github.miachm.sods.SpreadSheet;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.starkexport.common.AppConstant;
@@ -15,13 +17,13 @@ import com.swmansion.starknet.provider.Provider;
 import com.swmansion.starknet.provider.rpc.JsonRpcProvider;
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -48,6 +50,9 @@ import java.util.List;
 public class ExportController {
     private static final Logger log = LoggerFactory.getLogger(ExportController.class);
 
+    @Value("${provider.apikey}")
+    private String providerApiKey;
+
     @RequestMapping(value="/account/transactions", method = RequestMethod.GET)
     public void retrieveTransaction(@RequestParam(value = "address", required = true) String contractAddress, @RequestParam(value = "output", required = false, defaultValue = "xlsx") String output,
                                                  HttpServletResponse httpServletResponse){
@@ -67,6 +72,10 @@ public class ExportController {
                 httpServletResponse.setHeader("Content-Type", "text/plain");
                 httpServletResponse.setHeader("Content-Disposition", "attachment; filename=" + fileName + ".txt");
                 break;
+            case "ods":
+                httpServletResponse.setHeader("Content-Type", "application/vnd.oasis.opendocument.spreadsheet");
+                httpServletResponse.setHeader("Content-Disposition", "attachment; filename=" + fileName + ".ods");
+                break;
         }
 
         //todo singleton
@@ -76,7 +85,7 @@ public class ExportController {
         
         StarkscanNetwork starkscanNetwork = StarkscanServiceGenerator.createService(StarkscanNetwork.class, AppConstant.STARKSCAN_MAINNET_API_URL);
 
-        Call<Transaction> responseCall  = starkscanNetwork.retrieveTransaction("", 0, lastBlockNumber, contractAddress, "desc", 100);
+        Call<Transaction> responseCall  = starkscanNetwork.retrieveTransaction(providerApiKey, 0, lastBlockNumber, contractAddress, "desc", 100);
 
         try {
             retrofit2.Response<Transaction> response = responseCall.execute();
@@ -84,21 +93,70 @@ public class ExportController {
 
             if (output.equalsIgnoreCase("xlsx")) {
                 writeTransactionExcel(httpServletResponse, transaction);
-            } else if (output.equalsIgnoreCase("txt")){
+            } else if (output.equalsIgnoreCase("txt")) {
                 writeTransactionTxt(httpServletResponse, transaction);
+            } else if (output.equalsIgnoreCase("ods")){
+                writeTransactionOds(httpServletResponse, transaction);
             } else {
                 writeTransactionCsv(httpServletResponse, transaction);
             }
 
         } catch (IOException ioe){
             log.error(ioe.getMessage());
+        } catch (Exception e){
+            log.error(e.getMessage());
         }
+
+    }
+
+    private void writeTransactionOds(HttpServletResponse httpServletResponse, Transaction transaction) throws Exception {
+
+        int totalRow = transaction.getData().size() + 1;
+        com.github.miachm.sods.Sheet sheet = new com.github.miachm.sods.Sheet("Transactions", totalRow, 9);
+
+        SpreadSheet spreadSheet = new SpreadSheet();
+
+        //set header
+        sheet.getRange(0,0).setValue("Nonce");
+        sheet.getRange(0,1).setValue("DateTime UTC");
+        sheet.getRange(0,2).setValue("From");
+        sheet.getRange(0,3).setValue("TrxType");
+        sheet.getRange(0,4).setValue("Method");
+        sheet.getRange(0,5).setValue("TrxFee");
+        sheet.getRange(0,6).setValue("BlockNo");
+        sheet.getRange(0,7).setValue("Status");
+        sheet.getRange(0,8).setValue("TransactionHash");
+
+        int row = 1;
+        for(Data data : transaction.getData()){
+            sheet.getRange(row, 0).setValue(data.getNonce() == null ? 0 : Integer.parseInt(data.getNonce()));
+            sheet.getRange(row, 1).setValue(AppUtil.getUTCDate(data.getTimestamp()));
+            sheet.getRange(row, 2).setValue(StringUtils.defaultString(data.getSender_address()));
+            sheet.getRange(row, 3).setValue(data.getTransaction_type());
+
+            List<String> methodList = new ArrayList<>();
+
+            for(AccountCall accountCall : data.getAccount_calls()){
+                methodList.add(accountCall.getSelector_name());
+            }
+
+            sheet.getRange(row, 4).setValue(String.join(",", methodList));
+            sheet.getRange(row, 5).setValue(Double.valueOf(String.format("%.8f", Convert.fromWei(data.getActual_fee(), Convert.Unit.ETHER))));
+            sheet.getRange(row, 6).setValue(data.getBlock_number());
+            sheet.getRange(row, 7).setValue(data.getTransaction_status());
+            sheet.getRange(row, 8).setValue(data.getTransaction_hash());
+            row++;
+        }
+
+        spreadSheet.appendSheet(sheet);
+        spreadSheet.save(httpServletResponse.getOutputStream());
 
     }
 
     private void writeTransactionExcel(HttpServletResponse httpServletResponse, Transaction transaction) throws IOException {
         Workbook workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Transactions");
+        sheet.autoSizeColumn(5);
 
         int rowCount = 0;
 
@@ -116,7 +174,7 @@ public class ExportController {
 
         for(Data data : transaction.getData()){
             Row bodyRow = sheet.createRow(rowCount++);
-            bodyRow.createCell(0).setCellValue(StringUtils.defaultString(data.getNonce()));
+            bodyRow.createCell(0).setCellValue(data.getNonce() == null ? 0 : Integer.parseInt(data.getNonce()));
             bodyRow.createCell(1).setCellValue(AppUtil.getUTCDate(data.getTimestamp()));
             bodyRow.createCell(2).setCellValue(StringUtils.defaultString(data.getSender_address()));
             bodyRow.createCell(3).setCellValue(data.getTransaction_type());

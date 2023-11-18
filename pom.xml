@@ -208,6 +208,14 @@
       <artifactId>core</artifactId>
       <version>4.9.7</version>
     </dependency>
+
+    <!-- https://mvnrepository.com/artifact/com.github.miachm.sods/SODS -->
+    <dependency>
+      <groupId>com.github.miachm.sods</groupId>
+      <artifactId>SODS</artifactId>
+      <version>1.6.4</version>
+    </dependency>
+
   </dependencies>
   <build>
     <finalName>StarkExport</finalName>
