@@ -17,9 +17,8 @@ import com.swmansion.starknet.provider.Provider;
 import com.swmansion.starknet.provider.rpc.JsonRpcProvider;
 import org.apache.commons.lang.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -111,7 +110,7 @@ public class ExportController {
 
     private void writeTransactionOds(HttpServletResponse httpServletResponse, Transaction transaction) throws Exception {
 
-        int totalRow = transaction.getData().size() + 1;
+        int totalRow = transaction.getData().size() + 2;
         com.github.miachm.sods.Sheet sheet = new com.github.miachm.sods.Sheet("Transactions", totalRow, 9);
 
         SpreadSheet spreadSheet = new SpreadSheet();
@@ -126,6 +125,8 @@ public class ExportController {
         sheet.getRange(0,6).setValue("BlockNo");
         sheet.getRange(0,7).setValue("Status");
         sheet.getRange(0,8).setValue("TransactionHash");
+
+        BigDecimal totalFee = new BigDecimal(0);
 
         int row = 1;
         for(Data data : transaction.getData()){
@@ -142,11 +143,18 @@ public class ExportController {
 
             sheet.getRange(row, 4).setValue(String.join(",", methodList));
             sheet.getRange(row, 5).setValue(Double.valueOf(String.format("%.8f", Convert.fromWei(data.getActual_fee(), Convert.Unit.ETHER))));
+
+            totalFee = totalFee.add(new BigDecimal(String.valueOf(Convert.fromWei(data.getActual_fee(), Convert.Unit.ETHER))));
+
+
             sheet.getRange(row, 6).setValue(data.getBlock_number());
             sheet.getRange(row, 7).setValue(data.getTransaction_status());
             sheet.getRange(row, 8).setValue(data.getTransaction_hash());
             row++;
         }
+
+        //add total fee
+        sheet.getRange(row++,5).setValue(Double.valueOf(String.format("%.8f", totalFee)));;
 
         spreadSheet.appendSheet(sheet);
         spreadSheet.save(httpServletResponse.getOutputStream());
@@ -154,7 +162,7 @@ public class ExportController {
     }
 
     private void writeTransactionExcel(HttpServletResponse httpServletResponse, Transaction transaction) throws IOException {
-        Workbook workbook = new XSSFWorkbook();
+        Workbook  workbook = new XSSFWorkbook();
         Sheet sheet = workbook.createSheet("Transactions");
         sheet.autoSizeColumn(5);
 
@@ -172,6 +180,8 @@ public class ExportController {
         row.createCell(7).setCellValue("Status");
         row.createCell(8).setCellValue("TransactionHash");
 
+        BigDecimal totalFee = new BigDecimal(0);
+
         for(Data data : transaction.getData()){
             Row bodyRow = sheet.createRow(rowCount++);
             bodyRow.createCell(0).setCellValue(data.getNonce() == null ? 0 : Integer.parseInt(data.getNonce()));
@@ -187,10 +197,17 @@ public class ExportController {
 
             bodyRow.createCell(4).setCellValue(String.join(",", methodList));
             bodyRow.createCell(5).setCellValue(Double.valueOf(String.format("%.8f", Convert.fromWei(data.getActual_fee(), Convert.Unit.ETHER))));
+
+            totalFee = totalFee.add(new BigDecimal(String.valueOf(Convert.fromWei(data.getActual_fee(), Convert.Unit.ETHER))));
+
             bodyRow.createCell(6).setCellValue(data.getBlock_number());
             bodyRow.createCell(7).setCellValue(data.getTransaction_status());
             bodyRow.createCell(8).setCellValue(data.getTransaction_hash());
         }
+
+        //add total fee
+        Row endRow = sheet.createRow(rowCount++);
+        endRow.createCell(5).setCellValue(Double.valueOf(String.format("%.8f", totalFee)));
 
         workbook.write(httpServletResponse.getOutputStream());
 
