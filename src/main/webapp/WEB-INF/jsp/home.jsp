@@ -181,6 +181,7 @@
                                 <option>CSV</option>
                                 <option>TXT</option>
                                 <option>JSON</option>
+                                <option>HTML</option>
                                 <option>ODS</option>
                             </select>
                         </div>

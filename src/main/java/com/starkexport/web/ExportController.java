@@ -80,6 +80,11 @@ public class ExportController {
                 httpServletResponse.setHeader("Content-Type", "application/vnd.oasis.opendocument.spreadsheet");
                 httpServletResponse.setHeader("Content-Disposition", "attachment; filename=" + fileName + ".ods");
                 break;
+            case "html":
+                httpServletResponse.setHeader("Content-Type", "text/html");
+                httpServletResponse.setHeader("Content-Disposition", "attachment; filename=" + fileName + ".html");
+                break;
+
         }
 
         //todo singleton
@@ -101,8 +106,10 @@ public class ExportController {
                 writeTransactionTxt(httpServletResponse, transaction);
             } else if (output.equalsIgnoreCase("ods")) {
                 writeTransactionOds(httpServletResponse, transaction);
-            } else if (output.equalsIgnoreCase("json")){
+            } else if (output.equalsIgnoreCase("json")) {
                 writeTransactionJson(httpServletResponse, transaction);
+            } else if (output.equalsIgnoreCase("html")){
+                writeTransactionHtml(httpServletResponse, transaction);
             } else {
                 writeTransactionCsv(httpServletResponse, transaction);
             }
@@ -112,6 +119,48 @@ public class ExportController {
         } catch (Exception e){
             log.error(e.getMessage());
         }
+
+    }
+
+    private void writeTransactionHtml(HttpServletResponse httpServletResponse, Transaction transaction) throws Exception {
+        OutputStreamWriter writer = new OutputStreamWriter(httpServletResponse.getOutputStream());
+
+        StringBuilder content = new StringBuilder();
+
+        content.append("<!DOCTYPE html><html><head><title>Starknet Transactions</title></head><body><table border=\"1\" cellpadding=\"1\" cellspacing=\"1\" style=\"width:100%\"><tbody><tr><th>Nonce</th><th>DateTime UTC</th><th>From</th><th>TrxType</th><th>Method</th><th>TrxFee</th><th>BlockNo</th><th>Status</th><th>Transaction Hash</th></tr>");
+
+        BigDecimal totalFee = new BigDecimal(0);
+
+        for(Data data : transaction.getData()){
+
+            content.append("<tr>");
+            content.append("<td align='right'>").append(data.getNonce() == null ? 0 : Integer.parseInt(data.getNonce())).append("</td>");
+            content.append("<td>").append(AppUtil.getUTCDate(data.getTimestamp())).append("</td>");
+            content.append("<td>").append(StringUtils.defaultString(data.getSender_address())).append("</td>");
+            content.append("<td>").append(data.getTransaction_type()).append("</td>");
+
+            List<String> methodList = new ArrayList<>();
+
+            for(AccountCall accountCall : data.getAccount_calls()){
+                methodList.add(accountCall.getSelector_name());
+            }
+
+            content.append("<td>").append(String.join(",", methodList)).append("</td>");
+            content.append("<td align='right'>").append(String.format("%.8f", Convert.fromWei(data.getActual_fee(), Convert.Unit.ETHER))).append("</td>");
+
+            totalFee = totalFee.add(new BigDecimal(String.valueOf(Convert.fromWei(data.getActual_fee(), Convert.Unit.ETHER))));
+
+            content.append("<td>").append(data.getBlock_number()).append("</td>");
+            content.append("<td>").append(data.getTransaction_status()).append("</td>");
+            content.append("<td><a href='https://starkscan.co/tx/").append(data.getTransaction_hash()).append("'>").append(data.getTransaction_hash()).append("</a></td>");
+            content.append("</tr>");
+        }
+
+        content.append("<tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td align=\"right\"><strong>").append(Double.valueOf(String.format("%.8f", totalFee))).append("</strong></td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>");
+
+        content.append("</tbody></table></body></html>");
+        writer.write(content.toString());
+        writer.flush();
 
     }
 
