@@ -180,6 +180,7 @@
                                 <option>XLSX</option>
                                 <option>CSV</option>
                                 <option>TXT</option>
+                                <option>JSON</option>
                                 <option>ODS</option>
                             </select>
                         </div>

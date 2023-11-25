@@ -2,8 +2,8 @@ package com.starkexport.web;
 
 import com.github.miachm.sods.Range;
 import com.github.miachm.sods.SpreadSheet;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.gson.*;
+import com.google.gson.stream.JsonWriter;
 import com.starkexport.common.AppConstant;
 import com.starkexport.common.AppUtil;
 import com.starkexport.model.TransactionExport;
@@ -15,7 +15,7 @@ import com.starkexport.network.StarkscanServiceGenerator;
 import com.swmansion.starknet.data.types.StarknetChainId;
 import com.swmansion.starknet.provider.Provider;
 import com.swmansion.starknet.provider.rpc.JsonRpcProvider;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFFont;
@@ -40,6 +40,7 @@ import retrofit2.Call;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -71,6 +72,10 @@ public class ExportController {
                 httpServletResponse.setHeader("Content-Type", "text/plain");
                 httpServletResponse.setHeader("Content-Disposition", "attachment; filename=" + fileName + ".txt");
                 break;
+            case "json":
+                httpServletResponse.setHeader("Content-Type", "application/json");
+                httpServletResponse.setHeader("Content-Disposition", "attachment; filename=" + fileName + ".json");
+                break;
             case "ods":
                 httpServletResponse.setHeader("Content-Type", "application/vnd.oasis.opendocument.spreadsheet");
                 httpServletResponse.setHeader("Content-Disposition", "attachment; filename=" + fileName + ".ods");
@@ -94,8 +99,10 @@ public class ExportController {
                 writeTransactionExcel(httpServletResponse, transaction);
             } else if (output.equalsIgnoreCase("txt")) {
                 writeTransactionTxt(httpServletResponse, transaction);
-            } else if (output.equalsIgnoreCase("ods")){
+            } else if (output.equalsIgnoreCase("ods")) {
                 writeTransactionOds(httpServletResponse, transaction);
+            } else if (output.equalsIgnoreCase("json")){
+                writeTransactionJson(httpServletResponse, transaction);
             } else {
                 writeTransactionCsv(httpServletResponse, transaction);
             }
@@ -105,6 +112,40 @@ public class ExportController {
         } catch (Exception e){
             log.error(e.getMessage());
         }
+
+    }
+
+    private void writeTransactionJson(HttpServletResponse httpServletResponse, Transaction transaction) throws Exception {
+        OutputStreamWriter writer = new OutputStreamWriter(httpServletResponse.getOutputStream());
+        Gson gson = new GsonBuilder()
+                .setPrettyPrinting()
+                .create();
+
+        JsonArray jsonArray = new JsonArray();
+        for(Data data : transaction.getData()){
+            JsonObject jsonObject = new JsonObject();
+            jsonObject.addProperty("nonce",data.getNonce() == null ? 0 : Integer.parseInt(data.getNonce()));
+            jsonObject.addProperty("dateTimeUTC", AppUtil.getUTCDate(data.getTimestamp()));
+            jsonObject.addProperty("from", StringUtils.defaultString(data.getSender_address()));
+            jsonObject.addProperty("trxType", data.getTransaction_type());
+
+            List<String> methodList = new ArrayList<>();
+
+            for(AccountCall accountCall : data.getAccount_calls()){
+                methodList.add(accountCall.getSelector_name());
+            }
+
+            jsonObject.addProperty("method", String.join(",", methodList));
+            jsonObject.addProperty("trxFee", String.format("%.8f", Convert.fromWei(data.getActual_fee(), Convert.Unit.ETHER)));
+            jsonObject.addProperty("blockNo", data.getBlock_number());
+            jsonObject.addProperty("status", data.getTransaction_status());
+            jsonObject.addProperty("transactionHash", data.getTransaction_hash());
+
+            jsonArray.add(jsonObject);
+        }
+
+        writer.write(gson.toJson(jsonArray));
+        writer.flush();
 
     }
 
