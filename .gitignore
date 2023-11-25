@@ -38,4 +38,4 @@ build/
 .DS_Store
 
 ### credentials ###
-!**/src/main/webapp/WEB-INF/classes/credential.properties
+!/src/main/webapp/WEB-INF/classes/credential.properties
