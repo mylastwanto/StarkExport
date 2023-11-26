@@ -152,7 +152,7 @@ public class ExportController {
 
             content.append("<td>").append(data.getBlock_number()).append("</td>");
             content.append("<td>").append(data.getTransaction_status()).append("</td>");
-            content.append("<td><a href='https://starkscan.co/tx/").append(data.getTransaction_hash()).append("'>").append(data.getTransaction_hash()).append("</a></td>");
+            content.append("<td><a href='https://starkscan.co/tx/").append(data.getTransaction_hash()).append("' target='_blank'>").append(data.getTransaction_hash()).append("</a></td>");
             content.append("</tr>");
         }
 
